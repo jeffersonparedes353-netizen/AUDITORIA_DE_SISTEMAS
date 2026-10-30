@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────
+# Documentación: planes, notas, pasos y entregables (.md) NO se versionan
+# ─────────────────────────────────────────────
+*.md
+*.MD
+*.markdown
+
+# Dependencias
+node_modules/
+
+# Build de Vite
+dist/
+dist-ssr/
+*.local
+
+# Pruebas (Vitest / Playwright)
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editores / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.sw?
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code (configuración local)
+.claude/
+
+# Word generado con "npm run word" (se regenera desde ENTREGABLES.md)
+docs/*.docx
+~$*.docx
