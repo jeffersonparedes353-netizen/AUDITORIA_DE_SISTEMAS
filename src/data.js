@@ -8,6 +8,60 @@ export const FACTOR_PISTA = 0.5
 
 export const ORGANIZACION = 'Nexora Financiera S.A.'
 
+// Byte, la mascota: su energía depende de las decisiones del auditor.
+export const ENERGIA = {
+  inicial: 100,
+  maxima: 100,
+  galleta: 15, // decisión correcta sin pista
+  galletaPista: 8, // decisión correcta con pista
+  migaja: 5, // clasificación parcial (≥ 60 % bien)
+  dano: 20, // decisión incorrecta
+  banquete: 10, // nivel aprobado
+  castigo: 10, // nivel no aprobado
+}
+
+export const MASCOTA = {
+  nombre: 'Byte',
+  etapas: ['Polluelo', 'Búho Aprendiz', 'Búho Analista', 'Búho Investigador', 'Búho Guardián'],
+  frases: {
+    feliz: [
+      '¡Huu-huu! Tengo energía de sobra. ¡Vamos, auditor!',
+      'Evidencia primero, conclusiones después. 🦉',
+      'Confío en tu criterio. ¡Independencia ante todo!',
+    ],
+    normal: [
+      'Piensa como auditor: objetividad y escepticismo profesional.',
+      'Una galleta más no me caería mal… 🍪',
+      'Lee bien el escenario antes de decidir.',
+    ],
+    preocupado: [
+      'Uy… me estoy debilitando. ¡Cuidado con la próxima!',
+      'Tengo hambre… necesito buenas decisiones. 🍪',
+      'Si dudas, piensa en qué haría un auditor íntegro.',
+    ],
+    critico: [
+      'Ener…gía… crítica… 🔋',
+      'Una decisión mal tomada más y me apago…',
+      'Por favor… una galleta… 🍪',
+    ],
+    muerto: ['…'],
+  },
+  reacciones: {
+    galleta: ['¡Ñam! Esa decisión estuvo deliciosa.', '¡Crunch! Así se audita.', '¡Más galletas, más energía!'],
+    migaja: ['Mmm, una migaja… algo es algo.'],
+    hambre: ['¿Esa galleta es para mí? ¡Dámela, dámela! 🍪', '¡Huelo una galleta! ¿Me la das? 🍪'],
+    dano: ['¡Auch! Esa decisión me dolió.', '¡Ay! Un auditor no haría eso…', '¡Bzzt! Error de criterio detectado.'],
+    muerte: ['Me quedé sin energía… La auditoría no puede continuar sin mí. 💤'],
+  },
+}
+
+// Energía que gana (positivo) o pierde (negativo) Byte con una respuesta.
+export function energiaPorRespuesta({ correcto, pista, aciertos, total }) {
+  if (correcto) return pista ? ENERGIA.galletaPista : ENERGIA.galleta
+  if (total > 1 && aciertos / total >= 0.6) return ENERGIA.migaja
+  return -ENERGIA.dano
+}
+
 export const HISTORIA = [
   `${ORGANIZACION} es una fintech con 300.000 clientes. Su sistema central, NexoCore, gestiona cuentas, créditos y datos personales.`,
   'En los últimos meses ha habido caídas del servicio, quejas por cobros extraños y rumores de un acceso indebido a la información.',

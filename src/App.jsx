@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  NIVELES, HISTORIA, MISION, ORGANIZACION, OBJETIVOS, INSIGNIAS,
+  NIVELES, HISTORIA, MISION, ORGANIZACION, OBJETIVOS, INSIGNIAS, MASCOTA, ENERGIA,
   PUNTAJE_MAXIMO, UMBRAL_VICTORIA, UMBRAL_APROBACION, FACTOR_REPETICION, FACTOR_PISTA,
-  valorNivel, puntosReto, cerrarNivel,
+  valorNivel, puntosReto, cerrarNivel, energiaPorRespuesta,
 } from './data.js'
+import Mascota, { Burbuja, BarraEnergia, frase, sonar, alternarSonido, sonidoEncendido } from './Mascota.jsx'
 
 const CLAVE_MEJOR = 'auditor-simulator:mejor'
 const TOTAL_RETOS = NIVELES.reduce((s, n) => s + n.retos.length, 0)
@@ -19,6 +20,7 @@ const estadoInicial = () => ({
   correctos: {},
   pistas: 0,
   custodio: false,
+  energia: ENERGIA.inicial,
   final: null,
 })
 
@@ -39,6 +41,10 @@ const barajar = (lista) => {
   }
   return copia
 }
+
+const elegir = (lista, semilla) => lista[semilla % lista.length]
+const limitarEnergia = (e) => Math.max(0, Math.min(ENERGIA.maxima, e))
+const etapaMascota = (s) => s.resultados.filter((r) => r?.aprobado).length
 
 function puntajeTotal(s) {
   const cerrados = s.resultados.reduce((a, r) => a + (r?.aprobado ? r.puntos : 0), 0)
@@ -147,7 +153,7 @@ function FondoCodigo({ intenso }) {
 
 // ───────────────────────── HUD ─────────────────────────
 
-function Hud({ s }) {
+function Hud({ s, sonido, onSonido }) {
   const total = puntajeTotal(s)
   const mostrado = useContador(total)
   const hechos =
@@ -158,7 +164,8 @@ function Hud({ s }) {
   return (
     <header className="hud">
       <div className="hud-marca">
-        <span className="hud-logo">◆</span> AUDITOR<span className="acento">SIM</span>
+        <Mascota etapa={etapaMascota(s)} energia={s.energia} tam={30} />
+        <span className="hud-nombre">AUDITOR<span className="acento">SIM</span></span>
       </div>
       <div className="hud-datos">
         <div className="hud-dato" data-testid="hud-nivel">
@@ -169,10 +176,18 @@ function Hud({ s }) {
           <small>Puntaje</small>
           <strong>{mostrado}<span className="tenue">/{PUNTAJE_MAXIMO}</span></strong>
         </div>
+        <div className="hud-dato hud-energia" data-testid="hud-energia" data-valor={s.energia}>
+          <small>⚡ {MASCOTA.nombre}</small>
+          <strong key={s.energia} className="destello">{s.energia}%</strong>
+          <BarraEnergia energia={s.energia} />
+        </div>
         <div className="hud-dato">
-          <small>Insignias</small>
+          <small>Insig.</small>
           <strong>{insigniasObtenidas(s).length}</strong>
         </div>
+        <button className="btn-sonido" onClick={onSonido} aria-label={sonido ? 'Silenciar' : 'Activar sonido'} title={sonido ? 'Silenciar' : 'Activar sonido'}>
+          {sonido ? '🔊' : '🔇'}
+        </button>
       </div>
       <div className="hud-progreso" role="progressbar" aria-valuenow={progreso} aria-valuemin={0} aria-valuemax={100} aria-label="Progreso de la auditoría">
         <div className="hud-barra" style={{ width: `${progreso}%` }} />
@@ -189,10 +204,13 @@ function Inicio({ onComenzar, mejor }) {
     <section className="pantalla inicio">
       <p className="etiqueta parpadeo">● CONEXIÓN SEGURA ESTABLECIDA</p>
       <h1 className="glitch" data-texto="AUDITOR SIMULATOR">AUDITOR SIMULATOR</h1>
-      <p className="subtitulo">Conviértete en el auditor de sistemas que {ORGANIZACION} necesita.</p>
+      <div className="inicio-mascota">
+        <Mascota etapa={0} energia={100} reaccion="saludo" tam={130} testId="mascota-inicio" />
+        <Burbuja>¡Hola! Soy tu búho auditor. Me alimento de <strong>buenas decisiones</strong> 🍪. ¡No me dejes sin energía!</Burbuja>
+      </div>
       <div className="terminal">
         <p><span className="prompt">$</span> cargar_mision --cliente nexora</p>
-        <p className="tenue">› 4 niveles · 12 retos · {PUNTAJE_MAXIMO} puntos · 6 insignias</p>
+        <p className="tenue">› 4 niveles · 12 retos · {PUNTAJE_MAXIMO} puntos · 6 insignias · 1 búho</p>
         <p><span className="prompt">$</span> esperando auditor<span className="cursor">_</span></p>
       </div>
       <button className="btn btn-primario pulso" onClick={onComenzar} data-testid="btn-comenzar">
@@ -214,6 +232,18 @@ function Briefing({ onContinuar }) {
         <p className="etiqueta">🎯 MISIÓN PRINCIPAL</p>
         <p>{MISION}</p>
       </div>
+      <div className={`reglas-byte ${listo ? 'visible' : ''}`}>
+        <Mascota etapa={0} energia={100} reaccion="saludo" tam={74} />
+        <div>
+          <p className="etiqueta">🦉 TU COMPAÑERO: {MASCOTA.nombre.toUpperCase()}</p>
+          <ul>
+            <li>✅ Decisión correcta: le das una galleta 🍪 (+{ENERGIA.galleta} energía, +{ENERGIA.galletaPista} si usaste pista).</li>
+            <li>❌ Decisión incorrecta: {MASCOTA.nombre} pierde {ENERGIA.dano} de energía.</li>
+            <li>🧬 Cada nivel aprobado: {MASCOTA.nombre} evoluciona y recupera {ENERGIA.banquete}.</li>
+            <li>💀 Si su energía llega a 0, se apaga y la auditoría termina.</li>
+          </ul>
+        </div>
+      </div>
       <div className="acciones">
         {!listo && <button className="btn btn-fantasma" onClick={saltar}>Saltar ⏭</button>}
         <button className="btn btn-primario" onClick={onContinuar} data-testid="btn-continuar">
@@ -232,10 +262,22 @@ function estadoNodo(s, i) {
 }
 
 function Mapa({ s, onElegir }) {
+  const etapa = etapaMascota(s)
   return (
     <section className="pantalla mapa">
       <h2>Mapa de la auditoría</h2>
-      <p className="tenue">Aprueba cada nivel con al menos el {UMBRAL_APROBACION * 100}% de sus puntos para desbloquear el siguiente.</p>
+      <div className="tarjeta-mascota">
+        <Mascota etapa={etapa} energia={s.energia} tam={86} testId="mascota-mapa" />
+        <div className="tarjeta-mascota-info">
+          <p className="etiqueta">TU COMPAÑERO · {MASCOTA.etapas[etapa].toUpperCase()}</p>
+          <div className="fila-energia">
+            <BarraEnergia energia={s.energia} />
+            <strong>{s.energia}%</strong>
+          </div>
+          <Burbuja>{frase(s.energia, etapa)}</Burbuja>
+        </div>
+      </div>
+      <p className="tenue">Aprueba cada nivel con al menos el {UMBRAL_APROBACION * 100}% de sus puntos para desbloquear el siguiente y hacer evolucionar a {MASCOTA.nombre}.</p>
       <ol className="nodos">
         {NIVELES.map((n, i) => {
           const estado = estadoNodo(s, i)
@@ -301,7 +343,7 @@ function IntroNivel({ indice, intento, onIniciar, onVolver }) {
   )
 }
 
-function Reto({ s, onResponder, onSiguiente }) {
+function Reto({ s, onResponder, onAlimentar, onSiguiente }) {
   const nivel = NIVELES[s.nivel]
   const reto = nivel.retos[s.reto]
   const clasificar = reto.tipo === 'clasificar'
@@ -311,12 +353,20 @@ function Reto({ s, onResponder, onSiguiente }) {
   const [asignadas, setAsignadas] = useState({})
   const [pista, setPista] = useState(false)
   const [resultado, setResultado] = useState(null)
+  const [impaciente, setImpaciente] = useState(false)
   const valor = pista ? Math.round(reto.valor * FACTOR_PISTA) : reto.valor
+  const etapa = etapaMascota(s)
+
+  useEffect(() => {
+    const id = setTimeout(() => setImpaciente(true), 25000)
+    return () => clearTimeout(id)
+  }, [])
 
   const listo = clasificar ? Object.keys(asignadas).length === reto.items.length : seleccion !== null
 
   const asignar = (categoria) => {
     if (seleccion === null || resultado) return
+    sonar('click')
     const nuevas = { ...asignadas, [seleccion]: categoria }
     setAsignadas(nuevas)
     const siguiente = items.find((it) => nuevas[it.i] === undefined)
@@ -348,6 +398,18 @@ function Reto({ s, onResponder, onSiguiente }) {
         <span className={`valor ${pista ? 'reducido' : ''}`}>{valor} pts</span>
       </div>
       <h2>{reto.titulo}</h2>
+
+      <div className="companero">
+        <Mascota etapa={etapa} energia={s.energia} reaccion={reto.alerta ? 'alerta' : null} tam={62} testId="mascota-reto" />
+        <Burbuja>
+          {reto.alerta
+            ? '¡Huu-huu! ¡Alerta! Piensa muy bien: aquí se mide tu ética como auditor.'
+            : impaciente
+              ? 'Tengo hambre… ¿y esa decisión? 🍪'
+              : frase(s.energia, s.nivel + s.reto)}
+        </Burbuja>
+      </div>
+
       <p className="pregunta">{reto.pregunta}</p>
 
       {reto.evidencia && (
@@ -395,7 +457,11 @@ function Reto({ s, onResponder, onSiguiente }) {
               <li key={o.id} style={{ animationDelay: `${k * 80}ms` }}>
                 <button
                   className={`opcion ${seleccion === o.id ? 'seleccionada' : ''} ${estado}`}
-                  onClick={() => !resultado && setSeleccion(o.id)}
+                  onClick={() => {
+                    if (resultado) return
+                    sonar('click')
+                    setSeleccion(o.id)
+                  }}
                   aria-pressed={seleccion === o.id}
                   data-testid={`opcion-${o.id}`}
                 >
@@ -419,28 +485,80 @@ function Reto({ s, onResponder, onSiguiente }) {
         </button>
       </div>
 
-      {resultado && <Retroalimentacion reto={reto} res={resultado} onSiguiente={onSiguiente} ultimo={s.reto === nivel.retos.length - 1} />}
+      {resultado && (
+        <Retroalimentacion
+          reto={reto}
+          res={resultado}
+          energia={s.energia}
+          etapa={etapa}
+          onAlimentar={onAlimentar}
+          onSiguiente={onSiguiente}
+          ultimo={s.reto === nivel.retos.length - 1}
+        />
+      )}
     </section>
   )
 }
 
-function Retroalimentacion({ reto, res, onSiguiente, ultimo }) {
+function Retroalimentacion({ reto, res, energia, etapa, onAlimentar, onSiguiente, ultimo }) {
   const tipo = res.correcto ? 'ok' : res.aciertos > 0 ? 'parcial' : 'mal'
   const titulo = { ok: '¡Decisión correcta!', parcial: 'Parcialmente correcto', mal: 'Decisión incorrecta' }[tipo]
   const correcta = reto.opciones?.find((o) => o.id === reto.correcta)
+  const delta = energiaPorRespuesta(res)
+  const [comido, setComido] = useState(false)
+  const pendiente = delta > 0 && !comido
+  const muerto = energia <= 0
+  const semilla = Number(reto.id.replace('.', ''))
   const boton = useRef(null)
-  useEffect(() => boton.current?.focus(), [])
+  useEffect(() => boton.current?.focus(), [pendiente])
+
+  const reaccion = muerto ? 'muerte' : delta < 0 ? 'dano' : comido ? 'comer' : 'hambre'
+  const mensaje = muerto
+    ? MASCOTA.reacciones.muerte[0]
+    : delta < 0
+      ? elegir(MASCOTA.reacciones.dano, semilla)
+      : !comido
+        ? elegir(MASCOTA.reacciones.hambre, semilla)
+        : delta === ENERGIA.migaja
+          ? MASCOTA.reacciones.migaja[0]
+          : elegir(MASCOTA.reacciones.galleta, semilla)
+
+  const alimentar = () => {
+    setComido(true)
+    onAlimentar(delta)
+  }
 
   return (
     <div className="capa" role="dialog" aria-modal="true" aria-labelledby="fb-titulo">
-      <div className={`feedback ${tipo}`} data-testid="feedback" data-correcto={res.correcto}>
-        <div className="fb-icono">{tipo === 'ok' ? '✓' : tipo === 'parcial' ? '◐' : '✕'}</div>
-        <h3 id="fb-titulo">{titulo}</h3>
-        <p className="fb-puntos">
-          +{res.puntos} pts
-          {res.total > 1 && <span className="tenue"> · {res.aciertos}/{res.total} bien clasificados</span>}
-          {res.pista && <span className="tenue"> · pista usada</span>}
-        </p>
+      <div className={`feedback ${tipo} ${muerto ? 'muerte' : ''}`} data-testid="feedback" data-correcto={res.correcto}>
+        <div className="fb-cabecera">
+          <div className="fb-icono">{tipo === 'ok' ? '✓' : tipo === 'parcial' ? '◐' : '✕'}</div>
+          <div>
+            <h3 id="fb-titulo">{titulo}</h3>
+            <p className="fb-puntos">
+              +{res.puntos} pts
+              {res.total > 1 && <span className="tenue"> · {res.aciertos}/{res.total} bien clasificados</span>}
+              {res.pista && <span className="tenue"> · pista usada</span>}
+            </p>
+          </div>
+        </div>
+
+        <div className="fb-mascota">
+          <div className="fb-mascota-figura">
+            <Mascota key={reaccion} etapa={etapa} energia={energia} reaccion={reaccion} tam={96} testId="mascota-feedback" />
+            {(comido || delta < 0) && (
+              <span className={`m-delta ${delta < 0 ? 'menos' : 'mas'}`}>{delta > 0 ? '+' : ''}{delta} ⚡</span>
+            )}
+          </div>
+          <div className="fb-mascota-texto">
+            <Burbuja testId="burbuja-feedback">{mensaje}</Burbuja>
+            <div className="fila-energia">
+              <BarraEnergia energia={energia} />
+              <strong>{energia}%</strong>
+            </div>
+          </div>
+        </div>
+
         {res.opcion?.consecuencia && (
           <p className="fb-consecuencia"><strong>Consecuencia:</strong> {res.opcion.consecuencia}</p>
         )}
@@ -448,9 +566,16 @@ function Retroalimentacion({ reto, res, onSiguiente, ultimo }) {
           <p className="fb-correcta"><strong>Lo que haría un auditor:</strong> {correcta.texto}</p>
         )}
         <p className="fb-explicacion">{reto.explicacion}</p>
-        <button ref={boton} className="btn btn-primario" onClick={onSiguiente} data-testid="btn-siguiente">
-          {ultimo ? 'Ver resultado del nivel ▸' : 'Siguiente reto ▸'}
-        </button>
+
+        {pendiente ? (
+          <button ref={boton} className="btn btn-galleta pulso" onClick={alimentar} data-testid="btn-alimentar">
+            🍪 Darle la galleta a {MASCOTA.nombre} (+{delta} ⚡)
+          </button>
+        ) : (
+          <button ref={boton} className="btn btn-primario" onClick={onSiguiente} data-testid="btn-siguiente">
+            {muerto ? 'Ver qué pasó ▸' : ultimo ? 'Ver resultado del nivel ▸' : 'Siguiente reto ▸'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -463,6 +588,8 @@ function Resumen({ s, onMapa, onFinal }) {
   const max = valorNivel(n)
   const ultimoNivel = i === NIVELES.length - 1
   const sinIntentos = !r.aprobado && s.intentos[i] >= 2
+  const muerto = s.energia <= 0
+  const etapa = etapaMascota(s)
   const nuevas = insigniasObtenidas(s).filter((id) =>
     ({ 0: ['etica'], 1: ['alcance'], 2: ['riesgos'], 3: ['custodio'] })[i]?.includes(id),
   )
@@ -471,22 +598,34 @@ function Resumen({ s, onMapa, onFinal }) {
     <section className="pantalla tarjeta resumen" data-testid="resumen" data-aprobado={r.aprobado}>
       <p className="etiqueta">RESULTADO · NIVEL {i + 1}</p>
       <h2 className={r.aprobado ? 'texto-ok' : 'texto-mal'}>{r.aprobado ? 'Nivel aprobado' : 'Nivel no aprobado'}</h2>
+
+      <div className="resumen-mascota">
+        <Mascota etapa={etapa} energia={s.energia} reaccion={muerto ? 'muerte' : r.aprobado ? 'evolucion' : 'dano'} tam={110} testId="mascota-resumen" />
+        <Burbuja>
+          {muerto
+            ? MASCOTA.reacciones.muerte[0]
+            : r.aprobado
+              ? <>¡Evolucioné a <strong>{MASCOTA.etapas[etapa]}</strong>! +{ENERGIA.banquete} ⚡ de banquete.</>
+              : <>Ese nivel me dejó sin fuerzas… −{ENERGIA.castigo} ⚡. ¡Inténtalo de nuevo!</>}
+        </Burbuja>
+      </div>
+
       <Anillo valor={r.bruto} max={max} />
       <p>
         Obtuviste <strong>{r.bruto}</strong> de {max} pts (mínimo {Math.ceil(max * UMBRAL_APROBACION)}).
         {s.intentos[i] > 1 && r.aprobado && <> Con el factor de repetición suman <strong>{r.puntos}</strong>.</>}
       </p>
-      {!r.aprobado && !sinIntentos && (
+      {!r.aprobado && !sinIntentos && !muerto && (
         <p className="aviso">Los puntos de este intento no se suman. Puedes repetir el nivel una vez (puntaje × {FACTOR_REPETICION}).</p>
       )}
-      {sinIntentos && <p className="aviso mal">No aprobaste el nivel en el segundo intento. La auditoría será suspendida.</p>}
+      {sinIntentos && !muerto && <p className="aviso mal">No aprobaste el nivel en el segundo intento. La auditoría será suspendida.</p>}
       {nuevas.length > 0 && (
         <div className="insignias nuevas">
           {nuevas.map((id) => <Insignia key={id} id={id} obtenida sello />)}
         </div>
       )}
       <div className="acciones">
-        {(r.aprobado && ultimoNivel) || sinIntentos ? (
+        {(r.aprobado && ultimoNivel) || sinIntentos || muerto ? (
           <button className="btn btn-primario" onClick={onFinal} data-testid="btn-final">Ver informe final ▸</button>
         ) : (
           <button className="btn btn-primario" onClick={onMapa} data-testid="btn-mapa">Volver al mapa ▸</button>
@@ -545,9 +684,30 @@ function Confeti() {
 }
 
 const RESULTADOS = {
-  victoria: { icono: '🏆', titulo: 'Victoria: auditoría exitosa', texto: 'El Comité aprobó tu informe. Tus hallazgos están sustentados y tus recomendaciones serán implementadas.' },
-  observaciones: { icono: '📋', titulo: 'Auditoría completada con observaciones', texto: `Entregaste el informe, pero no alcanzaste los ${UMBRAL_VICTORIA} pts necesarios para la certificación. Repasa los conceptos marcados abajo.` },
-  suspendida: { icono: '⛔', titulo: 'Auditoría suspendida', texto: 'El Comité suspendió el encargo por no superar uno de los niveles. Revisa los principios y vuelve a intentarlo.' },
+  victoria: {
+    icono: '🏆',
+    titulo: 'Victoria: auditoría exitosa',
+    texto: 'El Comité aprobó tu informe. Tus hallazgos están sustentados y tus recomendaciones serán implementadas.',
+    byte: '¡Lo logramos! Ahora soy un Búho Guardián. ¡Gracias por cuidarme! 🦉👑',
+  },
+  observaciones: {
+    icono: '📋',
+    titulo: 'Auditoría completada con observaciones',
+    texto: `Entregaste el informe, pero no alcanzaste los ${UMBRAL_VICTORIA} pts necesarios para la certificación. Repasa los conceptos marcados abajo.`,
+    byte: 'Llegamos al final, pero podemos hacerlo mejor. ¿Otra ronda? 🍪',
+  },
+  suspendida: {
+    icono: '⛔',
+    titulo: 'Auditoría suspendida',
+    texto: 'El Comité suspendió el encargo por no superar uno de los niveles. Revisa los principios y vuelve a intentarlo.',
+    byte: 'No te rindas. Repasemos la ética y la planificación y volvamos a intentarlo.',
+  },
+  apagada: {
+    icono: '🪫',
+    titulo: `${MASCOTA.nombre} se apagó`,
+    texto: `Tu búho auditor se quedó sin energía por decisiones que un auditor no debe tomar. La auditoría terminó sin informe.`,
+    byte: '…zzz… (Reinícialo con "Volver a jugar")',
+  },
 }
 
 function Final({ s, onReiniciar }) {
@@ -564,12 +724,26 @@ function Final({ s, onReiniciar }) {
     <section className={`pantalla tarjeta final ${s.final}`} data-testid="final" data-resultado={s.final}>
       {s.final === 'victoria' && <Confeti />}
       <div className="final-icono">{res.icono}</div>
-      <h2 className={s.final === 'suspendida' ? 'glitch pequeno' : ''} data-texto={res.titulo}>{res.titulo}</h2>
+      <h2 className={s.final === 'suspendida' || s.final === 'apagada' ? 'glitch pequeno' : ''} data-texto={res.titulo}>{res.titulo}</h2>
       <p className="tenue">{res.texto}</p>
-      <div data-testid="puntaje-final" data-valor={total}>
-        <Anillo valor={total} max={PUNTAJE_MAXIMO} grande />
+
+      <div className="final-cuerpo">
+        <div className="final-mascota">
+          <Mascota
+            etapa={etapaMascota(s)}
+            energia={s.energia}
+            reaccion={s.final === 'victoria' ? 'fiesta' : s.final === 'apagada' ? 'muerte' : null}
+            tam={140}
+            testId="mascota-final"
+          />
+          <Burbuja>{res.byte}</Burbuja>
+          <p className="tenue">{MASCOTA.etapas[etapaMascota(s)]} · energía {s.energia}%</p>
+        </div>
+        <div data-testid="puntaje-final" data-valor={total}>
+          <Anillo valor={total} max={PUNTAJE_MAXIMO} grande />
+          <p className="tenue">Victoria desde {UMBRAL_VICTORIA} pts · Pistas usadas: {s.pistas}</p>
+        </div>
       </div>
-      <p className="tenue">Victoria desde {UMBRAL_VICTORIA} pts · Pistas usadas: {s.pistas}</p>
 
       <h3>Insignias ({obtenidas.length}/{Object.keys(INSIGNIAS).length})</h3>
       <div className="insignias">
@@ -595,6 +769,7 @@ function Final({ s, onReiniciar }) {
 export default function App() {
   const [s, setS] = useState(estadoInicial)
   const [mejor, setMejor] = useState(leerMejor)
+  const [sonido, setSonido] = useState(sonidoEncendido)
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: sinMovimiento() ? 'auto' : 'smooth' })
@@ -618,30 +793,46 @@ export default function App() {
       return { ...p, intentos, reto: 0, respuestas: [], pantalla: 'reto' }
     })
 
-  const responder = (res) =>
+  // Los errores le quitan energía a Byte de inmediato; los aciertos se cobran al darle la galleta.
+  const responder = (res) => {
+    const delta = energiaPorRespuesta(res)
+    if (delta < 0) sonar(s.energia + delta <= 0 ? 'muerte' : 'dano')
     setS((p) => ({
       ...p,
       respuestas: [...p.respuestas, res],
       correctos: { ...p.correctos, [res.id]: res.correcto },
       pistas: p.pistas + (res.pista ? 1 : 0),
       custodio: p.custodio || (res.alerta && res.correcto),
+      energia: delta < 0 ? limitarEnergia(p.energia + delta) : p.energia,
     }))
+  }
 
-  const siguiente = () =>
+  const alimentar = (delta) => {
+    sonar('comer')
+    setS((p) => ({ ...p, energia: limitarEnergia(p.energia + delta) }))
+  }
+
+  const siguiente = () => {
+    if (s.energia <= 0) return ir('final', { final: 'apagada' })
+    const nivel = NIVELES[s.nivel]
+    if (s.reto < nivel.retos.length - 1) return setS((p) => ({ ...p, reto: p.reto + 1 }))
+
+    const bruto = s.respuestas.reduce((a, r) => a + r.puntos, 0)
+    const cierre = cerrarNivel(nivel, bruto, s.intentos[s.nivel])
+    sonar(cierre.aprobado ? 'nivel' : 'dano')
     setS((p) => {
-      const nivel = NIVELES[p.nivel]
-      if (p.reto < nivel.retos.length - 1) return { ...p, reto: p.reto + 1 }
-      const bruto = p.respuestas.reduce((a, r) => a + r.puntos, 0)
       const resultados = [...p.resultados]
-      resultados[p.nivel] = cerrarNivel(nivel, bruto, p.intentos[p.nivel])
-      return { ...p, resultados, pantalla: 'resumen' }
+      resultados[p.nivel] = cierre
+      const energia = limitarEnergia(p.energia + (cierre.aprobado ? ENERGIA.banquete : -ENERGIA.castigo))
+      return { ...p, resultados, energia, pantalla: 'resumen' }
     })
+  }
 
   const terminar = () =>
     setS((p) => {
       const total = puntajeTotal(p)
       const completo = p.resultados.every((r) => r?.aprobado)
-      const final = !completo ? 'suspendida' : total >= UMBRAL_VICTORIA ? 'victoria' : 'observaciones'
+      const final = p.energia <= 0 ? 'apagada' : !completo ? 'suspendida' : total >= UMBRAL_VICTORIA ? 'victoria' : 'observaciones'
       return { ...p, final, pantalla: 'final' }
     })
 
@@ -652,15 +843,15 @@ export default function App() {
     <div className="app">
       <FondoCodigo intenso={s.pantalla === 'inicio'} />
       <div className="scanlines" aria-hidden="true" />
-      {conHud && <Hud s={s} />}
+      {conHud && <Hud s={s} sonido={sonido} onSonido={() => setSonido(alternarSonido())} />}
       <main className="contenido" key={clave}>
-        {s.pantalla === 'inicio' && <Inicio mejor={mejor} onComenzar={() => ir('briefing')} />}
+        {s.pantalla === 'inicio' && <Inicio mejor={mejor} onComenzar={() => { sonar('nivel'); ir('briefing') }} />}
         {s.pantalla === 'briefing' && <Briefing onContinuar={() => ir('mapa')} />}
         {s.pantalla === 'mapa' && <Mapa s={s} onElegir={(i) => ir('intro', { nivel: i })} />}
         {s.pantalla === 'intro' && (
           <IntroNivel indice={s.nivel} intento={s.intentos[s.nivel]} onIniciar={iniciarNivel} onVolver={() => ir('mapa')} />
         )}
-        {s.pantalla === 'reto' && <Reto s={s} onResponder={responder} onSiguiente={siguiente} />}
+        {s.pantalla === 'reto' && <Reto s={s} onResponder={responder} onAlimentar={alimentar} onSiguiente={siguiente} />}
         {s.pantalla === 'resumen' && <Resumen s={s} onMapa={() => ir('mapa')} onFinal={terminar} />}
         {s.pantalla === 'final' && <Final s={s} onReiniciar={() => setS(estadoInicial())} />}
       </main>

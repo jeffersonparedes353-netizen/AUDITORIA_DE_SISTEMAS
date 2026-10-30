@@ -671,6 +671,225 @@ p { margin: 0 0 0.8rem; }
   100% { clip-path: inset(85% 0 2% 0); }
 }
 
+/* ───────────── Byte, la mascota ───────────── */
+.mascota { position: relative; display: inline-block; flex: 0 0 auto; }
+.mascota svg { width: 100%; height: 100%; overflow: visible; animation: flotar 3.2s ease-in-out infinite; }
+.m-cuerpo { transform-box: view-box; transform-origin: 60px 124px; transition: transform 0.8s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.m-aura { opacity: 0.55; animation: respirar 3.2s ease-in-out infinite; }
+.m-ojos { transform-box: view-box; transform-origin: 60px 56px; animation: parpadear 4.6s infinite; }
+.m-antena { fill: var(--verde); filter: drop-shadow(0 0 4px var(--verde)); animation: antena 1.6s ease-in-out infinite; }
+.m-ala { transform-box: view-box; }
+.m-ala-izq { transform-origin: 30px 62px; }
+.m-ala-der { transform-origin: 90px 62px; }
+.m-pico { transform-box: view-box; transform-origin: 60px 68px; }
+.m-cejas, .m-sudor, .m-mejillas { display: none; }
+.m-sudor { animation: gota 1.4s ease-in infinite; }
+.m-halo { animation: flotar 2s ease-in-out infinite; }
+.m-galleta { transform-box: view-box; transform-origin: 60px 14px; animation: galleta 0.75s ease-in forwards; }
+
+.animo-feliz .m-mejillas { display: inline; }
+.animo-preocupado .m-cejas, .animo-critico .m-cejas { display: inline; }
+.animo-preocupado .m-antena { fill: var(--amarillo); filter: drop-shadow(0 0 4px var(--amarillo)); }
+.animo-critico .m-sudor { display: inline; }
+.animo-critico .m-antena { fill: var(--rojo); filter: drop-shadow(0 0 5px var(--rojo)); animation-duration: 0.5s; }
+.animo-critico svg { animation: flotar 3.2s ease-in-out infinite, falla 2.5s steps(1) infinite; }
+.animo-muerto svg { filter: grayscale(1) brightness(0.7); animation: none; }
+.animo-muerto .m-aura, .animo-muerto .m-antena { opacity: 0; }
+
+.reaccion-saludo .m-ala-der { animation: saludar 0.5s ease-in-out 4 alternate; }
+.reaccion-hambre { animation: saltitos 0.55s ease-in-out infinite; }
+.reaccion-comer { animation: masticar 0.22s ease-in-out 3 0.6s; }
+.reaccion-comer .m-pico { animation: abrir-pico 0.22s ease-in-out 3 0.55s; }
+.reaccion-comer .m-ala { animation: aletear 0.18s ease-in-out 6 0.75s alternate; }
+.reaccion-dano { animation: sacudir 0.45s 2, golpe-rojo 1.1s; }
+.reaccion-alerta .m-antena { fill: var(--rojo); animation-duration: 0.35s; }
+.reaccion-alerta { animation: sacudir 0.5s 1.2s 2; }
+.reaccion-evolucion { animation: evolucionar 1.3s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.reaccion-evolucion::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  border-radius: 50%;
+  border: 3px solid var(--amarillo);
+  animation: onda 1.3s ease-out 2;
+  pointer-events: none;
+}
+.reaccion-fiesta { animation: saltar 0.9s ease-in-out infinite; }
+.reaccion-fiesta .m-ala { animation: aletear 0.3s ease-in-out infinite alternate; }
+.reaccion-muerte { animation: apagarse 1.6s ease-in both; }
+
+.m-delta {
+  position: absolute;
+  top: 0;
+  right: -14px;
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 1.05rem;
+  pointer-events: none;
+  animation: subir-delta 1.6s ease-out forwards;
+}
+.m-delta.mas { color: var(--verde); text-shadow: 0 0 10px var(--verde); }
+.m-delta.menos { color: var(--rojo); text-shadow: 0 0 10px var(--rojo); }
+
+.burbuja {
+  position: relative;
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  animation: entrar 0.4s both 0.15s;
+}
+.burbuja > strong:first-child { color: var(--cian); font-family: var(--mono); }
+
+.barra-energia {
+  flex: 1;
+  min-width: 60px;
+  height: 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.barra-energia i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--verde);
+  transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.4s;
+}
+.barra-energia.animo-normal i { background: var(--cian); }
+.barra-energia.animo-preocupado i { background: var(--amarillo); }
+.barra-energia.animo-critico i { background: var(--rojo); animation: parpadeo 0.8s steps(2) infinite; }
+
+.fila-energia { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.85rem; }
+
+.inicio-mascota { display: flex; align-items: center; gap: 10px; max-width: 480px; text-align: left; margin: 4px 0; }
+
+.reglas-byte {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 1rem 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(57, 255, 136, 0.3);
+  background: rgba(57, 255, 136, 0.06);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s 0.3s, transform 0.6s 0.3s;
+}
+.reglas-byte.visible { opacity: 1; transform: none; }
+.reglas-byte .etiqueta { color: var(--verde); }
+.reglas-byte ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.9rem; }
+
+.tarjeta-mascota {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0.8rem 0 1rem;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.tarjeta-mascota-info { flex: 1; display: grid; gap: 8px; }
+.tarjeta-mascota-info .etiqueta { margin: 0; }
+
+.companero { display: flex; align-items: center; gap: 10px; margin: 0.2rem 0 1rem; }
+.companero .burbuja { font-size: 0.85rem; }
+
+.fb-cabecera { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.fb-cabecera .fb-icono { margin: 0; flex: 0 0 auto; }
+.fb-cabecera h3, .fb-cabecera .fb-puntos { margin: 0; }
+.fb-mascota {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--borde);
+  background: rgba(0, 229, 255, 0.05);
+}
+.fb-mascota-figura { position: relative; }
+.fb-mascota-texto { flex: 1; display: grid; gap: 8px; }
+.feedback.muerte { border-top-color: #8a8f99; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5); }
+.btn-galleta {
+  width: 100%;
+  margin-top: 6px;
+  background: linear-gradient(135deg, #ffd23f, #ff9f1c);
+  color: #2a1700;
+  box-shadow: 0 0 18px rgba(255, 210, 63, 0.45);
+}
+
+.resumen-mascota { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 6px auto 4px; max-width: 440px; }
+
+.final-cuerpo { display: grid; gap: 16px; align-items: center; margin: 8px 0; }
+.final-mascota { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.final-mascota .burbuja { max-width: 340px; flex: none; }
+.final-mascota .tenue { margin: 0; font-size: 0.85rem; }
+
+.hud-marca { display: flex; align-items: center; gap: 8px; }
+.hud-energia .barra-energia { flex: none; width: 54px; min-width: 0; height: 5px; margin-top: 3px; }
+.destello { animation: destello 0.7s; }
+.btn-sonido {
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--borde);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 479px) {
+  .hud-nombre { display: none; }
+  .hud-datos { gap: 10px; }
+}
+@media (min-width: 640px) {
+  .final-cuerpo { grid-template-columns: 1fr 1fr; }
+}
+
+@keyframes flotar { 50% { transform: translateY(-5px); } }
+@keyframes respirar { 50% { opacity: 0.85; } }
+@keyframes parpadear { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes antena { 50% { opacity: 0.35; } }
+@keyframes gota { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
+@keyframes falla { 0%, 100% { opacity: 1; } 47% { opacity: 0.55; } 49% { opacity: 1; } 51% { opacity: 0.6; } }
+@keyframes saludar { from { transform: rotate(0); } to { transform: rotate(-55deg); } }
+@keyframes saltitos { 50% { transform: translateY(-8px) scale(1.04); } }
+@keyframes galleta {
+  0% { transform: translateY(-14px) scale(1.2) rotate(-20deg); opacity: 1; }
+  80% { transform: translateY(54px) scale(0.6) rotate(25deg); opacity: 1; }
+  100% { transform: translateY(58px) scale(0.1); opacity: 0; }
+}
+@keyframes masticar { 50% { transform: scale(1.06, 0.92); } }
+@keyframes abrir-pico { 50% { transform: scaleY(1.5); } }
+@keyframes aletear { from { transform: rotate(0); } to { transform: rotate(-30deg); } }
+@keyframes golpe-rojo {
+  0% { filter: none; }
+  20% { filter: drop-shadow(0 0 14px var(--rojo)) sepia(1) hue-rotate(-50deg) saturate(4); }
+  100% { filter: none; }
+}
+@keyframes evolucionar {
+  0% { transform: scale(0.7); filter: brightness(3) drop-shadow(0 0 20px #fff); }
+  60% { transform: scale(1.2); filter: brightness(1.6) drop-shadow(0 0 18px var(--amarillo)); }
+  100% { transform: scale(1); filter: none; }
+}
+@keyframes onda { from { transform: scale(0.6); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+@keyframes saltar { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-16px) rotate(-4deg); } 70% { transform: translateY(0) scale(1.05, 0.95); } }
+@keyframes apagarse {
+  0% { transform: none; }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  100% { transform: rotate(-14deg) translateY(8px); }
+}
+@keyframes subir-delta { 0% { transform: translateY(10px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-34px); opacity: 0; } }
+@keyframes destello { 0% { color: #fff; text-shadow: 0 0 12px #fff; } 100% { text-shadow: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
